@@ -366,7 +366,7 @@ Ao término da especialização pretendo:
 
 ## 👨‍💻 Autor
 
-**[Seu Nome]**
+**Emanuel Lds**
 
 Pós-Graduação em Inteligência Artificial (IA)  
 UniCarioca — 2026
