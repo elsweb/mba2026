@@ -1,0 +1,68 @@
+Crie um chatbot interativo em Python 3.11.2 usando NLTK.
+
+Requisitos do projeto:
+
+- NÃO usar APIs externas
+- NÃO usar OpenAI
+- NÃO usar internet
+- NÃO usar modelos LLM grandes
+- O chatbot deve funcionar totalmente offline
+- O projeto deve ser extremamente leve
+- O chatbot deve carregar perguntas e respostas a partir de um arquivo CSV
+- O CSV deve funcionar como uma base de conhecimento
+- O chatbot deve usar NLTK para análise de sentimento
+- Detectar:
+  - positivo
+  - negativo
+  - neutro
+- O chatbot deve exibir no terminal o humor detectado
+- O chatbot deve responder baseado nas entradas do CSV
+- Caso não encontre resposta:
+  - responder fallback aleatório
+- O código deve ser organizado e comentado
+- O projeto deve funcionar em terminal
+- O chatbot deve possuir loop interativo
+- Deve aceitar:
+  - oi
+  - olá
+  - bom dia
+  - tchau
+  - sair
+- O sistema deve permitir expansão futura
+- O CSV deve ser facilmente editável no Excel
+- O chatbot deve ser apropriado para apresentação de MBA
+- Estrutura simples e profissional
+- Não usar frameworks web
+- Não usar GPU
+- Não usar banco de dados
+- Deve rodar em CPU fraca
+- Deve possuir:
+  - carregamento do CSV
+  - motor de respostas
+  - análise de sentimento
+  - loop de conversa
+  - fallback inteligente
+- O código deve usar:
+  - csv
+  - random
+  - nltk
+- O projeto deve conter:
+  - chat.py
+  - chat.csv
+  - requirements.txt
+
+Formato esperado do CSV:
+
+intent,user_input,response
+saudacao,oi,Olá 😄
+saudacao,olá,Oi tudo bem?
+despedida,tchau,Até mais 😄
+
+Também gere:
+- requirements.txt
+- exemplo de chat.csv
+- estrutura de pastas
+- comando de instalação
+- comando para executar
+
+O código deve ser completo e pronto para rodar.

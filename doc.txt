@@ -1,0 +1,5 @@
+model: qwen3.5-9b
+context: 16384
+
+pip3 install jupyter
+jupyter notebook
