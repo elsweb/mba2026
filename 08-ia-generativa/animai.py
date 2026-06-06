@@ -1,6 +1,8 @@
 import csv
 import random
 import nltk
+import pandas as pd
+from difflib import SequenceMatcher
 
 from nltk.sentiment import SentimentIntensityAnalyzer
 
@@ -12,13 +14,14 @@ nltk.download('vader_lexicon')
 
 knowledge = []
 
-with open('anime_chat_dataset.csv', 'r', encoding='utf-8') as file:
+url = "https://raw.githubusercontent.com/elsweb/mba2026/refs/heads/main/08-ia-generativa/anime_chat_dataset.csv"
 
-    reader = csv.DictReader(file)
+df = pd.read_csv(url)
 
-    for row in reader:
+knowledge = df.to_dict(orient="records")
 
-        knowledge.append(row)
+def similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 # =========================
 # NLTK
@@ -34,21 +37,21 @@ def get_response(user_input):
 
     text = user_input.lower()
 
-    matches = []
+    best_match = None
+    best_score = 0
 
     for item in knowledge:
 
         trigger = item['user_input'].lower()
 
-        if trigger in text:
+        score = similarity(text, trigger)
 
-            matches.append(item)
+        if score > best_score:
+            best_score = score
+            best_match = item
 
-    if matches:
-
-        selected = random.choice(matches)
-
-        return selected['response']
+    if best_score > 0.5:
+        return best_match['response']
 
     return random.choice([
         "Interessante 😄",
