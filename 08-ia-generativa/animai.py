@@ -54,10 +54,10 @@ def get_response(user_input):
         return best_match['response']
 
     return random.choice([
-        "Interessante 😄",
+        "Interessante",
         "Me conte mais",
-        "Entendi 😄",
-        "Legal 😄"
+        "Entendi",
+        "Legal"
     ])
 
 # =========================
@@ -74,7 +74,7 @@ while True:
 
     if user_input.lower() == "sair":
 
-        print("\nAnimai: Até mais 😄")
+        print("\nAnimai: Até mais")
         break
 
     # =========================
