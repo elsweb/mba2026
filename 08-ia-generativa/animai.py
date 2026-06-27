@@ -1,4 +1,5 @@
 import csv
+import re
 import random
 import nltk
 import pandas as pd
@@ -21,6 +22,32 @@ df = pd.read_csv(url)
 
 knowledge = df.to_dict(orient="records")
 
+# =========================
+# WORD2VEC
+# =========================
+
+texto_dataset = "\n".join(df["user_input"].astype(str).tolist())
+
+texto_limpo = re.sub(r"[^\w\s]", "", texto_dataset.lower())
+
+corpus = []
+
+for linha in texto_limpo.split("\n"):
+
+    linha = linha.strip()
+
+    if linha != "":
+        corpus.append(linha.split())
+
+modelo = Word2Vec(
+    sentences=corpus,
+    vector_size=100,
+    window=5,
+    min_count=1,
+    workers=4,
+    epochs=200
+)
+
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
@@ -38,11 +65,15 @@ def get_response(user_input):
 
     text = user_input.lower()
 
+    # =========================
+    # Primeira tentativa
+    # =========================
+
     best_match = None
     best_score = 0
 
-    # Primeira tentativa: SequenceMatcher
     for item in knowledge:
+
         trigger = item["user_input"].lower()
         score = similarity(text, trigger)
 
@@ -50,29 +81,56 @@ def get_response(user_input):
             best_score = score
             best_match = item
 
-    # Encontrou uma boa correspondência
-    if best_score > 0.5:
+    if best_score >= 0.7:
         return best_match["response"]
 
+    # =========================
     # Segunda tentativa: Word2Vec
+    # =========================
+
+    best_match = None
+    best_score = 0
+
     palavras = text.split()
 
-    for palavra in palavras:
+    for i, palavra in enumerate(palavras):
 
-        if palavra in modelo.wv:
+        if palavra not in modelo.wv:
+            continue
 
-            similares = modelo.wv.most_similar(palavra, topn=5)
+        similares = modelo.wv.most_similar(palavra, topn=10)
 
-            for similar, _ in similares:
+        for similar, _ in similares:
 
-                for item in knowledge:
+            nova_frase = palavras.copy()
+            nova_frase[i] = similar
+            frase = " ".join(nova_frase)
 
-                    trigger = item["user_input"].lower()
+            for item in knowledge:
 
-                    if similar in trigger:
-                        return item["response"]
+                trigger = item["user_input"].lower()
 
-    # Nenhuma correspondência encontrada
+                score = similarity(frase, trigger)
+
+                print(
+                    f"{palavra} -> {similar} | "
+                    f"score={score:.3f} | "
+                    f"{frase}"
+                )
+
+                if score > best_score:
+                    best_score = score
+                    best_match = item
+
+    print(f"Melhor score Word2Vec: {best_score:.3f}")
+
+    if best_score >= 0.6:
+        return best_match["response"]
+
+    # =========================
+    # Nenhuma correspondência
+    # =========================
+
     return random.choice([
         "Interessante 😄",
         "Me conte mais.",
