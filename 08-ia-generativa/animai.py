@@ -3,6 +3,7 @@ import random
 import nltk
 import pandas as pd
 from difflib import SequenceMatcher
+from gensim.models import Word2Vec
 
 from nltk.sentiment import SentimentIntensityAnalyzer
 
@@ -40,24 +41,43 @@ def get_response(user_input):
     best_match = None
     best_score = 0
 
+    # Primeira tentativa: SequenceMatcher
     for item in knowledge:
-
-        trigger = item['user_input'].lower()
-
+        trigger = item["user_input"].lower()
         score = similarity(text, trigger)
 
         if score > best_score:
             best_score = score
             best_match = item
 
+    # Encontrou uma boa correspondência
     if best_score > 0.5:
-        return best_match['response']
+        return best_match["response"]
 
+    # Segunda tentativa: Word2Vec
+    palavras = text.split()
+
+    for palavra in palavras:
+
+        if palavra in modelo.wv:
+
+            similares = modelo.wv.most_similar(palavra, topn=5)
+
+            for similar, _ in similares:
+
+                for item in knowledge:
+
+                    trigger = item["user_input"].lower()
+
+                    if similar in trigger:
+                        return item["response"]
+
+    # Nenhuma correspondência encontrada
     return random.choice([
-        "Interessante",
-        "Me conte mais",
-        "Entendi",
-        "Legal"
+        "Interessante 😄",
+        "Me conte mais.",
+        "Entendi 😄",
+        "Legal 😄"
     ])
 
 # =========================
