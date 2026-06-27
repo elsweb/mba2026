@@ -132,10 +132,10 @@ def get_response(user_input):
     # =========================
 
     return random.choice([
-        "Interessante 😄",
+        "Interessante",
         "Me conte mais.",
-        "Entendi 😄",
-        "Legal 😄"
+        "Entendi",
+        "Legal"
     ])
 
 # =========================
