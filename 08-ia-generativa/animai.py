@@ -3,12 +3,136 @@ import re
 import random
 import nltk
 import pandas as pd
+import sqlite3
 from difflib import SequenceMatcher
 from gensim.models import Word2Vec
 
 from nltk.sentiment import SentimentIntensityAnalyzer
 
 nltk.download('vader_lexicon')
+
+DB_NAME = "anime.db"
+
+##########################################################
+# CRIA O BANCO
+##########################################################
+
+def anime_database_init():
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anime (
+            nome TEXT PRIMARY KEY,
+            score REAL NOT NULL
+        )
+    """)
+
+    conn.commit()
+
+    cursor.execute("SELECT COUNT(*) FROM anime")
+
+    total = cursor.fetchone()[0]
+
+    if total == 0:
+
+        dados = [
+
+            ("Solo Leveling", 4.9),
+            ("One Piece", 4.9),
+            ("Attack on Titan", 4.9),
+            ("Naruto Shippuden", 4.8),
+            ("Demon Slayer", 4.8),
+            ("Jujutsu Kaisen", 4.8),
+            ("Bleach Thousand-Year Blood War", 4.9),
+            ("Chainsaw Man", 4.8),
+            ("Black Clover", 4.8),
+            ("My Hero Academia", 4.7),
+            ("Spy x Family", 4.8),
+            ("Dr. Stone", 4.8),
+            ("Frieren", 4.9),
+            ("The Apothecary Diaries", 4.9),
+            ("Hunter x Hunter", 4.9),
+            ("Death Note", 4.9),
+            ("Haikyuu!!", 4.9),
+            ("Blue Lock", 4.8),
+            ("Fire Force", 4.7),
+            ("Fullmetal Alchemist Brotherhood", 4.9)
+
+        ]
+
+        cursor.executemany(
+            "INSERT INTO anime(nome,score) VALUES(?,?)",
+            dados
+        )
+
+        conn.commit()
+
+    conn.close()
+    
+##########################################################
+# CONSULTA POR NOME
+##########################################################
+
+def anime_search(nome):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT nome, score
+        FROM anime
+        WHERE nome LIKE ?
+        ORDER BY score DESC
+    """, (f"%{nome}%",))
+
+    resultado = cursor.fetchall()
+
+    conn.close()
+
+    return resultado
+
+##########################################################
+# TOP ANIMES
+##########################################################
+
+def anime_top(limite=10):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT nome, score
+        FROM anime
+        ORDER BY score DESC, nome
+        LIMIT ?
+    """, (limite,))
+
+    resultado = cursor.fetchall()
+
+    conn.close()
+
+    return resultado
+
+##########################################################
+# INSERÇÃO
+##########################################################
+
+def anime_insert(nome, score):
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT OR REPLACE INTO anime(nome,score)
+        VALUES(?,?)
+    """, (nome, score))
+
+    conn.commit()
+    conn.close()
+
+anime_database_init()
 
 # =========================
 # LOAD CSV
@@ -142,41 +266,130 @@ def get_response(user_input):
 # CHAT
 # =========================
 
-print("=" * 50)
-print("CHAT CSV + NLTK")
-print("=" * 50)
+print("=" * 60)
+print("🤖 AniMai")
+print("=" * 60)
+print("Olá! Sou o AniMai.")
+print("Posso conversar sobre animes e consultar minha base de dados.")
+print()
+print("Você pode dizer coisas como:")
+print("- inserir anime")
+print("- consultar score")
+print("- melhores scores")
+print("- sair")
+print("=" * 60)
 
 while True:
 
     user_input = input("\nVocê: ")
 
-    if user_input.lower() == "sair":
+    texto = user_input.lower().strip()
 
-        print("\nAnimai: Até mais")
+    # =========================
+    # SAIR
+    # =========================
+
+    if texto == "sair":
+
+        print("\n🤖 AniMai: Obrigado pela conversa!")
+        print("Até a próxima!")
+
         break
 
     # =========================
-    # SENTIMENT
+    # INSERÇÃO
     # =========================
 
-    sentiment = sia.polarity_scores(user_input)
+    elif "inser" in texto or "cadastr" in texto or "adicionar" in texto:
 
-    compound = sentiment['compound']
+        print("\n🤖 AniMai: Vamos cadastrar um anime.")
 
-    emotion = "neutro"
+        nome = input("Nome do anime: ")
 
-    if compound >= 0.5:
-        emotion = "positivo"
+        while True:
 
-    elif compound <= -0.5:
-        emotion = "negativo"
+            try:
 
-    print(f"\n[Humor detectado: {emotion}]")
+                score = float(
+                    input("Score: ").replace(",", ".")
+                )
+
+                break
+
+            except ValueError:
+
+                print("Digite um número válido.")
+
+        anime_insert(nome, score)
+
+        print(f"\n🤖 AniMai: '{nome}' foi cadastrado com score {score}.")  
 
     # =========================
-    # RESPONSE
+    # TOP SCORES
     # =========================
 
-    response = get_response(user_input)
+    elif (
+        "melhores" in texto
+        or "top" in texto
+        or "ranking" in texto
+    ):
 
-    print(f"\nAnimai: {response}")
+        resultado = anime_top()
+
+        print("\n🏆 Ranking dos melhores animes\n")
+
+        for posicao, (anime, score) in enumerate(resultado, start=1):
+            print(f"{posicao:02d} - {anime} ({score})")
+            
+    
+    # =========================
+    # CONSULTA SCORE
+    # =========================
+
+    elif "score" in texto:
+
+        nome = input("\nNome do anime: ")
+
+        resultado = anime_search(nome)
+
+        if resultado:
+
+            print("\nResultado:")
+
+            for anime, score in resultado:
+
+                print(f"- {anime} | Score: {score}")
+
+        else:
+
+            print("\n🤖 AniMai: Não encontrei esse anime.")
+
+    # =========================
+    # CHAT INTELIGENTE
+    # =========================
+
+    else:
+
+        sentiment = sia.polarity_scores(user_input)
+
+        compound = sentiment["compound"]
+
+        emotion = "neutro"
+
+        if compound >= 0.5:
+
+            emotion = "positivo"
+
+        elif compound <= -0.5:
+
+            emotion = "negativo"
+
+        print(f"\n[Humor detectado: {emotion}]")
+
+        response = get_response(user_input)
+
+        print(f"\nAniMai: {response}")
+
+print("=" * 60)
+print("Sessão encerrada.")
+print("=" * 60)
