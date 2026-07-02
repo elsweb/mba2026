@@ -1,0 +1,238 @@
+Documentação das Seções do Código - RandomForestClassifier
+
+1. Instalação das Bibliotecas
+
+Objetivo: Garantir que todas as dependências necessárias estejam
+disponíveis.
+
+O que o código faz: - Instala pandas, numpy, scikit-learn, matplotlib e
+seaborn. - Essas bibliotecas serão utilizadas para manipulação dos
+dados, criação de gráficos e treinamento do modelo.
+
+------------------------------------------------------------------------
+
+2. Importações
+
+Objetivo: Carregar todas as bibliotecas utilizadas no projeto.
+
+O que o código faz: - Importa bibliotecas para leitura de dados. -
+Importa bibliotecas para visualização. - Importa ferramentas de
+pré-processamento. - Importa o algoritmo Random Forest. - Importa
+funções para avaliação do modelo.
+
+------------------------------------------------------------------------
+
+3. Carregamento dos Dados
+
+Objetivo: Ler as bases de treinamento e teste.
+
+O que o código faz: - Faz download dos arquivos CSV. - Carrega os dados
+com pandas. - Exibe o tamanho das bases. - Mostra as primeiras linhas
+para conferência.
+
+------------------------------------------------------------------------
+
+4. Feature Engineering (BMI)
+
+Objetivo: Criar uma nova característica para auxiliar o modelo.
+
+O que o código faz: - Calcula o Índice de Massa Corporal (IMC = Peso /
+Altura²). - Adiciona a coluna BMI na base de treino e teste.
+
+------------------------------------------------------------------------
+
+5. Visão Geral dos Dados
+
+Objetivo: Analisar a distribuição da variável alvo.
+
+O que o código faz: - Gera um gráfico CountPlot. - Mostra quantos
+registros existem em cada classe de obesidade.
+
+------------------------------------------------------------------------
+
+6. Variável Alvo
+
+Objetivo: Separar atributos e variável que será prevista.
+
+O que o código faz: - Remove ID e Target da base de treinamento. -
+Define X como atributos e y como variável alvo.
+
+------------------------------------------------------------------------
+
+7. Identificação das Colunas
+
+Objetivo: Descobrir automaticamente quais atributos são numéricos e
+categóricos.
+
+O que o código faz: - Analisa os tipos das colunas. - Cria listas para
+cada tipo de atributo.
+
+------------------------------------------------------------------------
+
+8. Distribuição das Variáveis Numéricas
+
+Objetivo: Verificar como os valores estão distribuídos.
+
+O que o código faz: - Gera histogramas para todas as variáveis
+numéricas. - Permite observar concentração, dispersão e assimetria.
+
+------------------------------------------------------------------------
+
+9. BOXPLOTS
+
+Objetivo: Detectar valores extremos (Outliers) e analisar a dispersão
+dos dados.
+
+O que o código faz: - Percorre todas as variáveis numéricas. - Cria um
+Boxplot individual para cada atributo. - Exibe mediana, quartis e
+possíveis outliers. - Auxilia na identificação de valores que podem
+impactar o treinamento do modelo.
+
+------------------------------------------------------------------------
+
+10. Correlação entre Variáveis
+
+Objetivo: Avaliar o relacionamento entre as variáveis numéricas.
+
+O que o código faz: - Calcula a matriz de correlação. - Gera um
+Heatmap. - Permite identificar atributos fortemente relacionados.
+
+------------------------------------------------------------------------
+
+11. Gráfico de Dispersão
+
+Objetivo: Visualizar a relação entre altura e peso.
+
+O que o código faz: - Cria um ScatterPlot. - Utiliza cores diferentes
+para cada classe de obesidade. - Facilita observar separações entre
+grupos.
+
+------------------------------------------------------------------------
+
+12. Histograma do BMI
+
+Objetivo: Analisar a distribuição do IMC.
+
+O que o código faz: - Gera um histograma. - Exibe também a curva de
+densidade (KDE).
+
+------------------------------------------------------------------------
+
+13. BMI por Classe
+
+Objetivo: Comparar o IMC entre as classes.
+
+O que o código faz: - Cria Boxplots separados por categoria. - Permite
+comparar mediana e dispersão do IMC entre as classes.
+
+------------------------------------------------------------------------
+
+14. Pré-processamento
+
+Objetivo: Preparar os dados para o treinamento.
+
+O que o código faz: - Substitui valores numéricos ausentes pela
+mediana. - Substitui categorias ausentes pela moda. - Aplica One-Hot
+Encoding nas variáveis categóricas.
+
+------------------------------------------------------------------------
+
+15. Divisão Treino e Validação
+
+Objetivo: Reservar dados para avaliar o modelo.
+
+O que o código faz: - Divide os dados em 80% treino e 20% validação. -
+Mantém o balanceamento das classes.
+
+------------------------------------------------------------------------
+
+16. Configuração do Random Forest
+
+Objetivo: Definir os parâmetros do algoritmo.
+
+O que o código faz: - Configura 500 árvores. - Limita profundidade. -
+Define critérios mínimos para divisão. - Executa processamento paralelo.
+
+------------------------------------------------------------------------
+
+17. Pipeline
+
+Objetivo: Automatizar todas as etapas do modelo.
+
+O que o código faz: - Une pré-processamento e Random Forest. - Garante
+que todas as transformações ocorram automaticamente.
+
+------------------------------------------------------------------------
+
+18. Treinamento
+
+Objetivo: Ensinar o modelo.
+
+O que o código faz: - Ajusta o Pipeline utilizando os dados de
+treinamento.
+
+------------------------------------------------------------------------
+
+19. Avaliação
+
+Objetivo: Medir o desempenho do modelo.
+
+O que o código faz: - Realiza previsões. - Calcula Accuracy. - Exibe
+Classification Report contendo Precisão, Recall e F1-Score.
+
+------------------------------------------------------------------------
+
+20. Matriz de Confusão
+
+Objetivo: Visualizar erros e acertos.
+
+O que o código faz: - Calcula a Confusion Matrix. - Gera um Heatmap. -
+Facilita identificar quais classes são confundidas.
+
+------------------------------------------------------------------------
+
+21. Treinamento Final
+
+Objetivo: Aproveitar toda a base disponível.
+
+O que o código faz: - Treina novamente utilizando todos os registros.
+
+------------------------------------------------------------------------
+
+22. Previsões na Base de Teste
+
+Objetivo: Gerar as classificações finais.
+
+O que o código faz: - Executa o método predict(). - Armazena as
+previsões.
+
+------------------------------------------------------------------------
+
+23. Feature Importance
+
+Objetivo: Descobrir quais atributos tiveram maior influência na
+classificação.
+
+O que o código faz: - Recupera todas as variáveis após One-Hot
+Encoding. - Obtém a importância calculada pelo Random Forest. - Ordena
+da maior para menor importância. - Exibe um gráfico com as 15 principais
+variáveis.
+
+------------------------------------------------------------------------
+
+24. Geração da Submissão
+
+Objetivo: Criar o arquivo final para envio ao Kaggle.
+
+O que o código faz: - Cria um DataFrame contendo ID e classe prevista. -
+Salva o arquivo CSV de submissão.
+
+------------------------------------------------------------------------
+
+Fluxo Geral do Projeto
+
+Instalação das Bibliotecas ↓ Importações ↓ Carregamento dos Dados ↓
+Feature Engineering ↓ Análise Exploratória (Histogramas, Boxplots,
+Heatmap, Scatterplot) ↓ Pré-processamento ↓ Divisão Treino/Validação ↓
+Pipeline ↓ Treinamento ↓ Avaliação ↓ Matriz de Confusão ↓ Treinamento
+Final ↓ Previsões ↓ Feature Importance ↓ Submissão Kaggle
