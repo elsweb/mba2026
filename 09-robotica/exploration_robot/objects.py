@@ -22,20 +22,58 @@ class Car:
         self.hit_timer = 0
         self.reverse_distance = 0
 
-        # Faixa atual (posição Y alvo)
-        self.lane_y = y
-        self.target_y = y
-
         # Limites da pista (valores fixos, poderiam vir do config)
-        self.track_top = 100
-        self.track_bottom = 600
+        self.track_top = TRACK_TOP
+        self.track_bottom = TRACK_BOTTOM
+
+        # Garante que a posição inicial esteja dentro dos limites
+        self.rect.y = max(self.track_top, min(y, self.track_bottom - self.rect.height))
+        self.lane_y = self.rect.y
+        self.target_y = self.rect.y
+        self.original_y = self.rect.y
 
         # Memória do obstáculo atual e direções já tentadas
         self.current_obstacle = None
         self.tried_directions = set()
 
-        # Guarda a posição original para o estado RETURN (se usado)
-        self.original_y = y
+    # ======================================================================
+    # Método auxiliar para manter o carro dentro da pista
+    # ======================================================================
+    def _set_y(self, y):
+        """Define a posição Y mantendo o carro dentro da pista."""
+        self.rect.y = max(
+            self.track_top,
+            min(y, self.track_bottom - self.rect.height)
+        )
+        
+    def _clamp_y(self):
+        self._set_y(self.rect.y)        
+
+    # ======================================================================
+    # Método de validação de posição (já existente, mas adaptado)
+    # ======================================================================
+
+    def _is_valid_position(self, rect, obstacles):
+        """
+        Verifica se a posição é válida:
+        - Dentro da pista
+        - Sem bater em obstáculos
+        """
+        # Limite superior
+        if rect.top < self.track_top:
+            return False
+        # Limite inferior
+        if rect.bottom > self.track_bottom:
+            return False
+        # Colisão com obstáculos
+        for obstacle in obstacles:
+            if rect.colliderect(obstacle.rect):
+                return False
+        return True
+
+    # ======================================================================
+    # Atualização principal
+    # ======================================================================
 
     def update(self, obstacles, end_x):
         """
@@ -66,7 +104,7 @@ class Car:
             self._handle_driving(obstacles)
 
     # ======================================================================
-    # Métodos auxiliares para cada estado
+    # Estados
     # ======================================================================
 
     def _handle_hit(self):
@@ -77,44 +115,50 @@ class Car:
             self.reverse_distance = 30
 
     def _handle_reverse(self, obstacles):
-        """
-        Estado de ré: recua um pouco e tenta encontrar uma direção livre
-        (para cima ou para baixo) que ainda não foi tentada.
-        """
+        """Recua e tenta encontrar uma nova faixa livre."""
         self.rect.x -= 2
         self.reverse_distance -= 2
 
         if self.reverse_distance <= 0:
-            offset = 60
-            caminhos = []
+            # Calcula o espaço máximo disponível para cima e para baixo
+            max_up = self.rect.top - self.track_top
+            max_down = self.track_bottom - self.rect.bottom
 
-            # Verifica direção para cima
-            if "UP" not in self.tried_directions:
-                if self.rect.y - offset >= self.track_top:
-                    caminhos.append(("UP", self.rect.y - offset))
+            # Lista de tentativas (apenas as que cabem)
+            tentativas = []
+            DESVIO = 40
+            if max_up >= DESVIO:
+                tentativas.append(("UP", -DESVIO))
 
-            # Verifica direção para baixo
-            if "DOWN" not in self.tried_directions:
-                if self.rect.y + offset + self.rect.height <= self.track_bottom:
-                    caminhos.append(("DOWN", self.rect.y + offset))
+            if max_down >= DESVIO:
+                tentativas.append(("DOWN", DESVIO))
 
             escolhido = None
-            for direcao, y in caminhos:
+            for direcao, offset in tentativas:
+                if direcao in self.tried_directions:
+                    continue
                 teste = self.rect.copy()
-                teste.y = y
-                # Verifica se a nova posição não colide com nenhum obstáculo
-                if not any(teste.colliderect(o.rect) for o in obstacles):
-                    escolhido = (direcao, y)
+                teste.y = max(
+                    self.track_top,
+                    min(
+                        teste.y + offset,
+                        self.track_bottom - teste.height
+                    )
+                )
+                if self._is_valid_position(teste, obstacles):
+                    escolhido = (direcao, teste.y)
                     break
 
             if escolhido:
-                direcao, y = escolhido
-                self.target_y = y
+                direcao, novo_y = escolhido
+                # Garantia extra (já foi validado, mas por segurança)
+                novo_y = max(self.track_top, min(novo_y, self.track_bottom - self.rect.height))
+                self.target_y = novo_y
                 self.tried_directions.add(direcao)
                 self.state = "AVOID"
             else:
-                # Nenhuma direção livre: continua ré e tentará de novo
-                self.reverse_distance = 30
+                # Não achou espaço, continua recuando
+                self.reverse_distance = 40
 
     def _handle_avoid(self, obstacles):
         """
@@ -124,13 +168,15 @@ class Car:
         # Move verticalmente em direção ao alvo
         if abs(self.rect.y - self.target_y) > self.vertical_speed:
             if self.rect.y < self.target_y:
-                self.rect.y += self.vertical_speed
+                self._set_y(self.rect.y + self.vertical_speed)
             else:
-                self.rect.y -= self.vertical_speed
-            return  # continua no próximo frame
+                self._set_y(self.rect.y - self.vertical_speed)
+            self._clamp_y()   # Mantém dentro dos limites
+            return
 
         # Chegou na faixa alvo
-        self.rect.y = self.target_y
+        self._set_y(self.target_y)
+        self._clamp_y()       # Segurança extra
 
         # Avança horizontalmente
         self.rect.x += self.speed
@@ -154,12 +200,15 @@ class Car:
         self.rect.x += self.speed
 
         if self.rect.y < self.original_y:
-            self.rect.y += self.vertical_speed
+            self._set_y(self.rect.y + self.vertical_speed)
         elif self.rect.y > self.original_y:
-            self.rect.y -= self.vertical_speed
+            self._set_y(self.rect.y - self.vertical_speed)
+
+        self._clamp_y()   # Mantém dentro dos limites
 
         if abs(self.rect.y - self.original_y) <= self.vertical_speed:
             self.rect.y = self.original_y
+            self._clamp_y()
             self.state = "DRIVING"
 
     def _handle_driving(self, obstacles):
@@ -167,16 +216,17 @@ class Car:
         Estado normal: tenta avançar; se colidir com algum obstáculo,
         entra no estado HIT.
         """
+        # Segurança: garante que o carro está dentro da pista
+        self._clamp_y()
+
         next_rect = self.rect.move(self.speed, 0)
 
         for obstacle in obstacles:
             if next_rect.colliderect(obstacle.rect):
                 self.color = RED
-
                 if self.current_obstacle != obstacle:
                     self.current_obstacle = obstacle
                     self.tried_directions.clear()
-
                 self.state = "HIT"
                 self.hit_timer = 20
                 return
