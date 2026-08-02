@@ -112,17 +112,17 @@ class Car:
         self.reverse_distance = 0
 
         # Agora o multiplicador controla o tamanho do desvio
-        DESVIO = self.rect.height * self.avoid_multiplier
+        DESVIO_Y = self.rect.height * self.avoid_multiplier
 
         tentativas = []
 
         # Tentativa para cima
-        novo_y = self.rect.y - DESVIO
+        novo_y = self.rect.y - DESVIO_Y
         if novo_y >= self.track_top:
             tentativas.append(("UP", novo_y))
 
         # Tentativa para baixo
-        novo_y = self.rect.y + DESVIO
+        novo_y = self.rect.y + DESVIO_Y
         if novo_y + self.rect.height <= self.track_bottom:
             tentativas.append(("DOWN", novo_y))
 
