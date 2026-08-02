@@ -4,4 +4,4 @@ ava
 examples
 anime.db
 __pycache__
-exploration_robot_tackpath.bin
+*.bin
