@@ -2,7 +2,7 @@ import struct
 import os
 
 # Use um caminho absoluto ou relativo; certifique-se de que o diretório existe
-MEMORY_FILE = "route_memory.bin"
+MEMORY_FILE = "exploration_robot_tackpath.bin"
 
 class RouteMemory:
 
