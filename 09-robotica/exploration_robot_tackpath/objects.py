@@ -1,5 +1,6 @@
 import pygame
 from config import *
+from memory import RouteMemory
 
 class Car:
     """Classe que representa o carro controlado por IA."""
@@ -24,6 +25,7 @@ class Car:
         self.max_reverse_distance = 200
         self.avoid_multiplier = 1
         self.max_avoid_multiplier = 10
+        self.memory = RouteMemory()
 
     # ======================================================================
     # Métodos auxiliares (inalterados)
@@ -208,6 +210,9 @@ class Car:
         if self._try_move(self.speed, 0, obstacles):
             if self.current_obstacle:
                 if self.rect.left > self.current_obstacle.rect.right:
+                    offset = (self.target_y - self.rect.y)
+                    self.memory.save_point(self.current_obstacle.rect.x,offset)
+                    
                     self.current_obstacle = None
                     self.tried_directions.clear()
                     self.lane_y = self.target_y
@@ -244,13 +249,24 @@ class Car:
         next_rect = self.rect.move(self.speed, 0)
         for obstacle in obstacles:
             if next_rect.colliderect(obstacle.rect):
-                self.color = RED
-                if self.current_obstacle != obstacle:
-                    self.current_obstacle = obstacle
-                    self.tried_directions.clear()
-                    self._reset_avoid_multipliers()
+                # procura memória
+                memory = self.memory.find_route(
+                    obstacle.rect.x
+                )
+                if memory:
+                    # já sabe passar
+                    self.target_y = (
+                        self.rect.y + memory["offset"]
+                    )
+                    self.state = "AVOID"
+                    return
+                
+                # comportamento antigo
                 self.state = "HIT"
                 self.hit_timer = 20
+
+                self.current_obstacle = obstacle
+
                 return
         self.rect = next_rect
         self.color = BLUE
