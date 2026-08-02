@@ -35,6 +35,10 @@ class Car:
         self.current_obstacle = None
         self.tried_directions = set()
 
+        # Controle de recuo total (evita que o carro suma da tela)
+        self.total_reverse = 0
+        self.max_reverse_distance = 200   # limite máximo de recuo em pixels
+
     # ======================================================================
     # Métodos auxiliares para manter o carro dentro da pista e validar posição
     # ======================================================================
@@ -102,6 +106,7 @@ class Car:
             if self.rect.left > self.current_obstacle.rect.right:
                 self.current_obstacle = None
                 self.tried_directions.clear()
+                self.total_reverse = 0   # reseta o contador de ré ao ultrapassar
 
         # Chama o método correspondente ao estado atual
         if self.state == "HIT":
@@ -127,18 +132,26 @@ class Car:
             self.reverse_distance = 30
 
     def _handle_reverse(self, obstacles):
-        """Recua e tenta encontrar uma nova faixa livre."""
-        # Recua, ignorando o obstáculo atual para não ficar preso
+        """Recua e tenta encontrar uma nova faixa livre, com limite de recuo."""
+        # Verifica se já recuou demais
+        if self.total_reverse >= self.max_reverse_distance:
+            # Desiste de recuar: volta a dirigir e tenta novamente
+            self.state = "DRIVING"
+            self.current_obstacle = None
+            self.tried_directions.clear()
+            self.total_reverse = 0
+            self.reverse_distance = 0
+            return
+
+        # Recua, ignorando o obstáculo atual
         if self._try_move(-2, 0, obstacles, ignore_obstacle=self.current_obstacle):
             self.reverse_distance -= 2
-        # Se não conseguir recuar, mantém a distância e tenta novamente no próximo frame
+            self.total_reverse += 2   # acumula a distância total recuada
 
         if self.reverse_distance <= 0:
-            # Calcula o espaço máximo disponível para cima e para baixo
             max_up = self.rect.top - self.track_top
             max_down = self.track_bottom - self.rect.bottom
 
-            # Lista de tentativas (apenas as que cabem)
             tentativas = []
             DESVIO = 40
             if max_up >= DESVIO:
@@ -155,21 +168,21 @@ class Car:
                     self.track_top,
                     min(teste.y + offset, self.track_bottom - teste.height)
                 )
-                # Verifica se a posição é válida (ignorando o obstáculo atual para permitir desvio)
                 if self._is_valid_position(teste, obstacles, ignore_obstacle=self.current_obstacle):
                     escolhido = (direcao, teste.y)
                     break
 
             if escolhido:
                 direcao, novo_y = escolhido
-                # Garantia extra (já foi validado, mas por segurança)
                 novo_y = max(self.track_top, min(novo_y, self.track_bottom - self.rect.height))
                 self.target_y = novo_y
                 self.tried_directions.add(direcao)
                 self.state = "AVOID"
+                self.total_reverse = 0   # reseta ao encontrar uma direção
             else:
-                # Não achou espaço, continua recuando
-                self.reverse_distance = 40
+                # Não encontrou direção: recua mais um pouco (20 pixels) e limpa as tentativas
+                self.reverse_distance = 20
+                self.tried_directions.clear()
 
     def _handle_avoid(self, obstacles):
         """
@@ -291,20 +304,3 @@ class Car:
         pygame.draw.circle(screen, BLACK, (x + 72, y + 5), 8)
         pygame.draw.circle(screen, BLACK, (x + 18, y + 45), 8)
         pygame.draw.circle(screen, BLACK, (x + 72, y + 45), 8)
-
-
-class Obstacle:
-    """Classe para obstáculos estáticos na pista."""
-
-    def __init__(self, x, y, w=40, h=40, color=(255, 100, 0)):
-        self.rect = pygame.Rect(x, y, w, h)
-        self.color = color
-
-    def draw(self, screen):
-        """Desenha o obstáculo como um retângulo arredondado."""
-        pygame.draw.rect(
-            screen,
-            self.color,
-            self.rect,
-            border_radius=5
-        )
