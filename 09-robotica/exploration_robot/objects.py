@@ -78,12 +78,14 @@ class Car:
     # ======================================================================
 
     def _handle_hit(self):
-        """Após colisão, aguarda e depois inicia a ré com distância proporcional ao multiplicador."""
+        """Após colisão inicia a ré novamente."""
         self.hit_timer -= 1
+
         if self.hit_timer <= 0:
             self.state = "REVERSE"
-            # A distância de ré agora é multiplicada pelo avoid_multiplier (eixo X)
-            self.reverse_distance = 30
+
+            # sempre reinicia a ré para cada batida
+            self.reverse_hit_distance = 10
             
     def _reset_avoid_multipliers(self):
         self.avoid_multiplier_up = 1
@@ -91,12 +93,39 @@ class Car:
         self.tried_directions.clear()
 
     def _handle_reverse(self, obstacles):
-        # Fase 2 – Já recuou: testa desvios SEM ignorar o obstáculo atual
+        # Fase 2 – Recuou após bater: testa desvios SEM ignorar o obstáculo atual
 
-        base_x = self.rect.x
+        # =========================
+        # RÉ REALISTA APÓS BATIDA
+        # =========================
+
+        if not hasattr(self, "reverse_hit_distance"):
+            self.reverse_hit_distance = 30
+
+        # ainda precisa dar ré
+        if self.reverse_hit_distance > 0:
+
+            # velocidade da ré
+            reverse_speed = 2
+
+            # recua no eixo X
+            move = -reverse_speed if self.speed > 0 else reverse_speed
+
+            self.rect.x += move
+
+            self.reverse_hit_distance -= abs(move)
+
+            # continua recuando
+            return
+
+
+        # =========================
+        # JÁ RECUOU - PROCURA DESVIO
+        # =========================
+
         base_y = self.rect.y
 
-        # Criar multiplicadores separados caso ainda não existam
+
         if not hasattr(self, "avoid_multiplier_up"):
             self.avoid_multiplier_up = 1
 
@@ -107,6 +136,7 @@ class Car:
         # =========================
         # TENTATIVA PARA CIMA
         # =========================
+
         desvio_up = self.rect.height * self.avoid_multiplier_up
 
         y_up = base_y - desvio_up
@@ -124,20 +154,19 @@ class Car:
                 self.total_reverse = 0
                 self.tried_directions.clear()
 
-                # reset apenas o lado que funcionou
                 self.avoid_multiplier_up = 1
 
                 return
 
 
-        # Falhou para cima, aumenta somente o multiplicador de cima
+        # falhou para cima
         self.avoid_multiplier_up += 1
-
 
 
         # =========================
         # TENTATIVA PARA BAIXO
         # =========================
+
         desvio_down = self.rect.height * self.avoid_multiplier_down
 
         y_down = base_y + desvio_down
@@ -155,13 +184,12 @@ class Car:
                 self.total_reverse = 0
                 self.tried_directions.clear()
 
-                # reset apenas o lado que funcionou
                 self.avoid_multiplier_down = 1
 
                 return
 
 
-        # Falhou para baixo, aumenta somente o multiplicador de baixo
+        # falhou para baixo
         self.avoid_multiplier_down += 1
     
     def _handle_avoid(self, obstacles):
@@ -183,6 +211,8 @@ class Car:
                     self.current_obstacle = None
                     self.tried_directions.clear()
                     self.lane_y = self.target_y
+                    self.avoid_multiplier_up = 1
+                    self.avoid_multiplier_down = 1
                     self.state = "DRIVING"
             else:
                 self.state = "DRIVING"
