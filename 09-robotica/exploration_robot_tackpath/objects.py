@@ -28,7 +28,7 @@ class Car:
         self.memory = RouteMemory()
 
     # ======================================================================
-    # Métodos auxiliares (inalterados)
+    # Métodos auxiliares
     # ======================================================================
     def _set_y(self, y):
         self.rect.y = max(self.track_top, min(y, self.track_bottom - self.rect.height))
@@ -54,24 +54,44 @@ class Car:
         return False
 
     # ======================================================================
-    # Atualização principal (inalterada)
+    # Atualização principal
     # ======================================================================
     def update(self, obstacles, end_x):
+        # Se chegou ao final da pista, salva a última rota pendente
         if self.rect.x >= end_x:
+            if self.current_obstacle:
+                offset = self.target_y - self.original_y
+                self.memory.save_point(
+                    self.current_obstacle.rect.x,
+                    offset
+                )
+
+                self.current_obstacle = None
+                self.tried_directions.clear()
+                self.total_reverse = 0
+
             return
+
+        # Verifica se já ultrapassou o obstáculo atual
         if self.current_obstacle:
             if self.rect.left > self.current_obstacle.rect.right:
                 self.current_obstacle = None
                 self.tried_directions.clear()
                 self.total_reverse = 0
+
+        # Máquina de estados
         if self.state == "HIT":
             self._handle_hit()
+
         elif self.state == "REVERSE":
             self._handle_reverse(obstacles)
+
         elif self.state == "AVOID":
             self._handle_avoid(obstacles)
+
         elif self.state == "RETURN":
             self._handle_return()
+
         else:
             self._handle_driving(obstacles)
 
@@ -85,7 +105,6 @@ class Car:
 
         if self.hit_timer <= 0:
             self.state = "REVERSE"
-
             # sempre reinicia a ré para cada batida
             self.reverse_hit_distance = 10
             
@@ -195,23 +214,45 @@ class Car:
         self.avoid_multiplier_down += 1
     
     def _handle_avoid(self, obstacles):
-        """Desvia verticalmente e avança horizontalmente (sem usar multiplicador)."""
+        """Desvia verticalmente e avança horizontalmente (com validação de colisão vertical)."""
+        # Verifica se já atingiu a posição alvo
         if abs(self.rect.y - self.target_y) > self.vertical_speed:
+            # Calcula o movimento vertical necessário
             if self.rect.y < self.target_y:
-                self._set_y(self.rect.y + self.vertical_speed)
+                dy = min(self.vertical_speed, self.target_y - self.rect.y)
             else:
-                self._set_y(self.rect.y - self.vertical_speed)
-            self._clamp_y()
+                dy = max(-self.vertical_speed, self.target_y - self.rect.y)
+
+            # Tenta mover verticalmente com validação de colisão
+            if self._try_move(0, dy, obstacles):
+                # Movimento vertical bem sucedido
+                pass
+            else:
+                # Não foi possível mover verticalmente sem colidir com outro obstáculo
+                self.color = RED
+                self.state = "HIT"
+                self.hit_timer = 20
+                # Encontra qual obstáculo causou a colisão (para referência)
+                for obs in obstacles:
+                    if self.rect.move(0, dy).colliderect(obs.rect):
+                        self.current_obstacle = obs
+                        break
+                return
+            # Continua no próximo frame
             return
 
+        # Atingiu a posição alvo verticalmente
         self._set_y(self.target_y)
         self._clamp_y()
 
+        # Tenta avançar horizontalmente
         if self._try_move(self.speed, 0, obstacles):
+            # Conseguiu avançar
             if self.current_obstacle:
                 if self.rect.left > self.current_obstacle.rect.right:
-                    offset = (self.target_y - self.rect.y)
-                    self.memory.save_point(self.current_obstacle.rect.x,offset)
+                    # Ultrapassou o obstáculo atual: salva rota
+                    offset = self.target_y - self.original_y
+                    self.memory.save_point(self.current_obstacle.rect.x, offset)
                     
                     self.current_obstacle = None
                     self.tried_directions.clear()
@@ -220,8 +261,10 @@ class Car:
                     self.avoid_multiplier_down = 1
                     self.state = "DRIVING"
             else:
+                # Não havia obstáculo atual, volta a dirigir
                 self.state = "DRIVING"
         else:
+            # Não conseguiu avançar horizontalmente: colidiu
             self.color = RED
             self.state = "HIT"
             self.hit_timer = 20
@@ -249,25 +292,32 @@ class Car:
         next_rect = self.rect.move(self.speed, 0)
         for obstacle in obstacles:
             if next_rect.colliderect(obstacle.rect):
-                # procura memória
-                memory = self.memory.find_route(
-                    obstacle.rect.x
-                )
+                # Procura rota na memória para este obstáculo
+                memory = self.memory.find_route(obstacle.rect.x)
                 if memory:
-                    # já sabe passar
-                    self.target_y = (
-                        self.rect.y + memory["offset"]
-                    )
-                    self.state = "AVOID"
-                    return
+                    # Calcula a posição alvo a partir da memória
+                    target_y = self.original_y + memory["offset"]
+                    # Valida se essa posição é segura (não colide com nenhum obstáculo)
+                    test_rect = self.rect.copy()
+                    test_rect.y = target_y
+                    # Ignora o obstáculo atual para não bloquear a verificação
+                    if self._is_valid_position(test_rect, obstacles, ignore_obstacle=obstacle):
+                        # Posição segura: usa a rota
+                        self.current_obstacle = obstacle
+                        self.target_y = target_y
+                        self.state = "AVOID"
+                        return
+                    else:
+                        # A rota memorizada não é mais segura, então ignora e comporta como se não tivesse memória
+                        # (cai no comportamento antigo de bater)
+                        pass
                 
-                # comportamento antigo
+                # Comportamento antigo: bater e iniciar ré
                 self.state = "HIT"
                 self.hit_timer = 20
-
                 self.current_obstacle = obstacle
-
                 return
+        # Nenhum obstáculo à frente: segue em frente
         self.rect = next_rect
         self.color = BLUE
 
@@ -283,7 +333,7 @@ class Car:
         pygame.draw.circle(screen, BLACK, (x + 72, y + 5), 8)
         pygame.draw.circle(screen, BLACK, (x + 18, y + 45), 8)
         pygame.draw.circle(screen, BLACK, (x + 72, y + 45), 8)
-        
+
 class Obstacle:
     """Classe para obstáculos estáticos na pista."""
 
