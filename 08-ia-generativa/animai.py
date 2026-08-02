@@ -236,11 +236,11 @@ def get_response(user_input):
 
                 score = similarity(frase, trigger)
 
-                print(
-                    f"{palavra} -> {similar} | "
-                    f"score={score:.3f} | "
-                    f"{frase}"
-                )
+                # print(
+                #     f"{palavra} -> {similar} | "
+                #     f"score={score:.3f} | "
+                #     f"{frase}"
+                # )
 
                 if score > best_score:
                     best_score = score
