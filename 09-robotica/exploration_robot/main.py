@@ -37,7 +37,7 @@ while running:
         if event.type==pygame.QUIT:
             running=False
 
-    car.update(end_x)
+    car.update(obstacles, end_x)
 
     draw_road(screen,start_x,end_x)
 
