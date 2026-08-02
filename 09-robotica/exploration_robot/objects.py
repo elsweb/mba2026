@@ -84,88 +84,85 @@ class Car:
             self.state = "REVERSE"
             # A distância de ré agora é multiplicada pelo avoid_multiplier (eixo X)
             self.reverse_distance = 30
+            
+    def _reset_avoid_multipliers(self):
+        self.avoid_multiplier_up = 1
+        self.avoid_multiplier_down = 1
+        self.tried_directions.clear()
 
     def _handle_reverse(self, obstacles):
-        """
-        Recua uma distância fixa e aumenta o deslocamento vertical
-        conforme o avoid_multiplier.
-        """
+        # Fase 2 – Já recuou: testa desvios SEM ignorar o obstáculo atual
 
-        # Limite de recuo total
-        if self.total_reverse >= self.max_reverse_distance:
-            self.state = "DRIVING"
-            self.current_obstacle = None
-            self.tried_directions.clear()
-            self.total_reverse = 0
-            self.reverse_distance = 0
-            self.avoid_multiplier = 1
-            return
+        base_x = self.rect.x
+        base_y = self.rect.y
 
-        # Ré fixa (não depende do multiplicador)
-        if self.reverse_distance > 0:
-            if self._try_move(-2, 0, obstacles, ignore_obstacle=self.current_obstacle):
-                self.reverse_distance -= 2
-                self.total_reverse += 2
-            return
+        # Criar multiplicadores separados caso ainda não existam
+        if not hasattr(self, "avoid_multiplier_up"):
+            self.avoid_multiplier_up = 1
 
-        # Terminou a ré, tenta desviar
-        self.reverse_distance = 0
-
-        # Agora o multiplicador controla o tamanho do desvio
-        DESVIO = self.rect.height * self.avoid_multiplier
-        
-        print(DESVIO)
-
-        tentativas = []
-
-        # Tentativa para cima
-        novo_y = self.rect.y - DESVIO
-        if novo_y >= self.track_top:
-            tentativas.append(("UP", novo_y))
-
-        # Tentativa para baixo
-        novo_y = self.rect.y + DESVIO
-        if novo_y + self.rect.height <= self.track_bottom:
-            tentativas.append(("DOWN", novo_y))
+        if not hasattr(self, "avoid_multiplier_down"):
+            self.avoid_multiplier_down = 1
 
 
-        escolhido = None
+        # =========================
+        # TENTATIVA PARA CIMA
+        # =========================
+        desvio_up = self.rect.height * self.avoid_multiplier_up
 
-        for direcao, novo_y in tentativas:
-            if direcao in self.tried_directions:
-                continue
+        y_up = base_y - desvio_up
+
+        if y_up >= self.track_top:
 
             teste = self.rect.copy()
-            teste.y = novo_y
+            teste.y = y_up
 
-            if self._is_valid_position(
-                teste,
-                obstacles,
-                ignore_obstacle=self.current_obstacle
-            ):
-                escolhido = (direcao, novo_y)
-                break
+            if self._is_valid_position(teste, obstacles, ignore_obstacle=None):
+
+                self.target_y = y_up
+                self.state = "AVOID"
+
+                self.total_reverse = 0
+                self.tried_directions.clear()
+
+                # reset apenas o lado que funcionou
+                self.avoid_multiplier_up = 1
+
+                return
 
 
-        if escolhido:
-            direcao, novo_y = escolhido
+        # Falhou para cima, aumenta somente o multiplicador de cima
+        self.avoid_multiplier_up += 1
 
-            self.target_y = novo_y
-            self.tried_directions.add(direcao)
-            self.state = "AVOID"
 
-            # mantém o multiplicador para próximos desvios
-            self.total_reverse = 0
 
-        else:
-            # Não conseguiu desviar:
-            # aumenta o multiplicador do DESVIO
-            if self.avoid_multiplier < self.max_avoid_multiplier:
-                self.avoid_multiplier += 1
+        # =========================
+        # TENTATIVA PARA BAIXO
+        # =========================
+        desvio_down = self.rect.height * self.avoid_multiplier_down
 
-            # nova tentativa de ré fixa
-            self.reverse_distance = 30
-            self.tried_directions.clear()
+        y_down = base_y + desvio_down
+
+        if y_down + self.rect.height <= self.track_bottom:
+
+            teste = self.rect.copy()
+            teste.y = y_down
+
+            if self._is_valid_position(teste, obstacles, ignore_obstacle=None):
+
+                self.target_y = y_down
+                self.state = "AVOID"
+
+                self.total_reverse = 0
+                self.tried_directions.clear()
+
+                # reset apenas o lado que funcionou
+                self.avoid_multiplier_down = 1
+
+                return
+
+
+        # Falhou para baixo, aumenta somente o multiplicador de baixo
+        self.avoid_multiplier_down += 1
     
     def _handle_avoid(self, obstacles):
         """Desvia verticalmente e avança horizontalmente (sem usar multiplicador)."""
@@ -221,6 +218,7 @@ class Car:
                 if self.current_obstacle != obstacle:
                     self.current_obstacle = obstacle
                     self.tried_directions.clear()
+                    self._reset_avoid_multipliers()
                 self.state = "HIT"
                 self.hit_timer = 20
                 return
