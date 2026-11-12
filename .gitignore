@@ -5,3 +5,6 @@ examples
 anime.db
 __pycache__
 *.bin
+py-pairlens
+py-petvision
+09-robotica/py-little-agent/
